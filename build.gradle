@@ -1,0 +1,20 @@
+plugins {
+    id 'org.spongepowered.plugin' version '0.8.1'
+    id 'io.franzbecker.gradle-lombok' version '1.14'
+
+}
+
+repositories {
+    mavenCentral()
+}
+
+group = 'me.tassu'
+version = '1.0.0-SNAPSHOT'
+description = 'the hub is awesome'
+
+dependencies {
+    compile 'com.github.xemiru.sponge:boxboy:1.2'
+    compile 'org.spongepowered:spongeapi:7.0.0'
+}
+
+
