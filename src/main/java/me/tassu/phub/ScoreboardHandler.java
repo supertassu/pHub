@@ -26,8 +26,8 @@
 package me.tassu.phub;
 
 import com.google.common.collect.Lists;
-import flavor.pie.bungeelib.BungeeLib;
 import lombok.val;
+import me.tassu.phub.util.BungeeTracker;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.entity.living.player.Player;
@@ -46,34 +46,50 @@ import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class ScoreboardHandler {
 
-    private BungeeLib bungeeLib;
+    private static final Text ONLINE_PLAYERS_TEXT = Text.of(TextColors.GRAY, TextStyles.ITALIC, "Players ");
+    private static final Text NETWORK_LEVEL_TEXT = Text.of(TextColors.GRAY, TextStyles.ITALIC, "Level ");
 
-    private static final Text ONLINE_PLAYERS_TEXT = Text.of(
-            TextColors.GRAY, TextStyles.ITALIC, "Players "
-    );
-
-    private static final Text NETWORK_LEVEL_TEXT = Text.of(
-            TextColors.GRAY, TextStyles.ITALIC, "Level "
-    );
+    private static final Text QUEUE_ID_TEXT = Text.of(TextColors.GRAY, "Queued for ");
+    private static final Text QUEUE_POS_TEXT = Text.of(TextColors.GRAY, "Position ", TextColors.WHITE, "» ");
+    private static final Text NA = Text.of(TextColors.RED, "N/A");
 
     public ScoreboardHandler(PHub instance) {
-        bungeeLib = new BungeeLib(instance.getContainer());
+        Sponge.getScheduler().createTaskBuilder().execute(() -> Sponge.getServer().getOnlinePlayers().forEach(player -> {
+            player.getScoreboard().getTeam("int_level")
+                    .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET,
+                            player.get(Keys.EXPERIENCE_LEVEL).orElse(0))));
+            player.getScoreboard().getTeam("int_online")
+                    .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET, BungeeTracker.getInstance().getCount())));
 
-        Sponge.getScheduler().createTaskBuilder()
-                .execute(() -> {
-                    if (Sponge.getServer().getOnlinePlayers().size() < 1) return;
-                    bungeeLib.getGlobalPlayerCount().thenAccept(it -> Sponge.getServer().getOnlinePlayers().forEach(player -> {
-                        player.getScoreboard().getTeam("int_level")
-                                .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET,
-                                        player.get(Keys.EXPERIENCE_LEVEL).orElse(0))));
-                        player.getScoreboard().getTeam("int_online")
-                                .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET, it)));
-                    }));
-                })
+            Optional.ofNullable(instance.getQueueDataMap().get(player.getUniqueId())).ifPresent(
+                    queue -> {
+                        player.getScoreboard().getTeam("int_queue_id")
+                                .ifPresent(team -> {
+                                    if (queue.getQueue().isEmpty()) {
+                                        team.setSuffix(NA);
+                                    } else {
+                                        team.setSuffix(Text.of(TextColors.GREEN, queue.getQueue()));
+                                    }
+                                });
+
+                        player.getScoreboard().getTeam("int_queue_pos")
+                                .ifPresent(team -> {
+                                    if (queue.getLength().isEmpty()
+                                            || queue.getPosition().isEmpty()) {
+                                        team.setSuffix(NA);
+                                    } else {
+                                        team.setSuffix(Text.of(TextColors.GREEN, queue.getPosition()
+                                                + " out of " + queue.getLength()));
+                                    }
+                                });
+                    }
+            );
+        }))
                 .interval(10, TimeUnit.SECONDS)
                 .name("Hub Scoreboard updater")
                 .submit(instance);
@@ -94,8 +110,11 @@ public class ScoreboardHandler {
         objective.getOrCreateScore(Text.of(TextColors.DARK_GREEN)).setScore(-4);
         objective.getOrCreateScore(ONLINE_PLAYERS_TEXT).setScore(-5);
         objective.getOrCreateScore(NETWORK_LEVEL_TEXT).setScore(-6);
-        objective.getOrCreateScore(Text.of(TextColors.DARK_RED)).setScore(-7);
-        objective.getOrCreateScore(Text.of(Text.of(TextColors.DARK_GREEN, "www.tassu.me"))).setScore(-8);
+        objective.getOrCreateScore(Text.of(TextColors.DARK_PURPLE)).setScore(-7);
+        objective.getOrCreateScore(QUEUE_ID_TEXT).setScore(-8);
+        objective.getOrCreateScore(QUEUE_POS_TEXT).setScore(-9);
+        objective.getOrCreateScore(Text.of(TextColors.DARK_RED)).setScore(-10);
+        objective.getOrCreateScore(Text.of(Text.of(TextColors.DARK_GREEN, "www.tassu.me"))).setScore(-11);
 
         val scoreboard = Scoreboard
                 .builder()
@@ -112,6 +131,18 @@ public class ScoreboardHandler {
                                 .name("int_level")
                                 .suffix(Text.of(TextColors.RESET, player.get(Keys.EXPERIENCE_LEVEL).orElse(0)))
                                 .members(Collections.singleton(NETWORK_LEVEL_TEXT))
+                                .build(),
+                        Team
+                                .builder()
+                                .name("int_queue_id")
+                                .suffix(NA)
+                                .members(Collections.singleton(QUEUE_ID_TEXT))
+                                .build(),
+                        Team
+                                .builder()
+                                .name("int_queue_pos")
+                                .suffix(NA)
+                                .members(Collections.singleton(QUEUE_POS_TEXT))
                                 .build()
                 ))
                 .build();

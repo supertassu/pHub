@@ -27,6 +27,7 @@ package flavor.pie.bungeelib;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import lombok.Getter;
 import org.spongepowered.api.GameState;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.Sponge;
@@ -57,8 +58,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @author Adam Spofford
  */
 public class BungeeLib {
-    private Object plugin;
-    private ChannelBinding.RawDataChannel chan;
+    @Getter private ChannelBinding.RawDataChannel chan;
     private ChannelListener listener;
 
     /**
@@ -68,12 +68,11 @@ public class BungeeLib {
      */
     public BungeeLib(PluginContainer container) {
         checkNotNull(container, "container");
-        plugin = container.getInstance().get();
-        Sponge.getEventManager().registerListener(container.getInstance().get(), GameStartedServerEvent.class, event -> {
-            chan = Sponge.getChannelRegistrar().createRawChannel(plugin, "BungeeCord");
-            listener = new ChannelListener();
-            chan.addListener(Platform.Type.SERVER, listener);
-        });
+        //noinspection OptionalGetWithoutIsPresent
+        Object plugin = container.getInstance().get();
+        chan = Sponge.getChannelRegistrar().createRawChannel(plugin, "BungeeCord");
+        listener = new ChannelListener();
+        chan.addListener(Platform.Type.SERVER, listener);
     }
 
     private void checkState() throws IllegalStateException {

@@ -26,10 +26,15 @@
 package me.tassu.phub;
 
 import com.flowpowered.math.vector.Vector3d;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import lombok.Getter;
 import lombok.val;
+import me.tassu.phub.util.BungeeTracker;
+import me.tassu.phub.util.QueueData;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.Platform;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.manipulator.mutable.PotionEffectData;
 import org.spongepowered.api.effect.particle.ParticleEffect;
@@ -40,10 +45,12 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.gamemode.GameModes;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
+import org.spongepowered.api.event.action.FishingEvent;
 import org.spongepowered.api.event.cause.entity.damage.source.DamageSource;
 import org.spongepowered.api.event.cause.entity.damage.source.DamageSources;
 import org.spongepowered.api.event.entity.DamageEntityEvent;
 import org.spongepowered.api.event.entity.living.humanoid.ChangeGameModeEvent;
+import org.spongepowered.api.event.filter.IsCancelled;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.game.state.GameStartingServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingEvent;
@@ -60,25 +67,52 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.text.title.Title;
+import org.spongepowered.api.util.Tristate;
 
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 
 @Plugin(id = "phub", name = "PHub", description = "the hub is awesome", version = "1.0.0")
 public class PHub {
 
+    @Getter private flavor.pie.bungeelib.BungeeLib bungeeLib;
+
     @Inject private Game game;
     @Inject private Logger logger;
 
     @Inject private PluginContainer container;
 
+    @Getter private Map<UUID, QueueData> queueDataMap = Maps.newHashMap();
+
     @Listener
     public void onServerStart(GameStartingServerEvent event) {
         logger.info("Preparing to take over the world!");
 
-        game.getEventManager().registerListeners(this, new ServerSelectorHandler());
+        bungeeLib = new flavor.pie.bungeelib.BungeeLib(container);
+
+        bungeeLib.getChan().addListener(Platform.Type.SERVER, (data, connection, side) -> {
+            if (data.available() < "QueueUpdate".getBytes().length) return;
+            val subChannel = data.readUTF();
+            if (!subChannel.equalsIgnoreCase("QueueUpdate")) return;
+
+            try {
+                //noinspection InfiniteLoopStatement - will throw an exception
+                while (true) {
+                    val uuid = UUID.fromString(data.readUTF());
+                    queueDataMap.put(uuid, new QueueData(data.readUTF(), data.readUTF(), data.readUTF()));
+                }
+            } catch (IndexOutOfBoundsException ignored) {}
+        });
+
+        new BungeeTracker(this);
+
+        game.getEventManager().registerListeners(this, new ServerSelectorHandler(this));
+        game.getEventManager().registerListeners(this, new TabListHandler(this));
         game.getEventManager().registerListeners(this, new JumpPadHandler());
         game.getEventManager().registerListeners(this, new ScoreboardHandler(this));
+        game.getEventManager().registerListeners(this, new CheckpointHandler());
     }
 
     @Listener
@@ -120,6 +154,7 @@ public class PHub {
         player.offer(Keys.CAN_FLY, false);
 
         player.setLocation(world.getSpawnLocation().add(0.5, 0.5, 0.5));
+        player.setRotation(new Vector3d(0, 0, 90));
 
         this.giveEffects(player);
         this.giveItems(player);
@@ -196,6 +231,7 @@ public class PHub {
                     .orElseThrow(IllegalStateException::new).getUniqueId()).orElseThrow(IllegalArgumentException::new);
 
             player.setLocation(world.getSpawnLocation().add(0.5, 0.5, 0.5));
+            player.setRotation(new Vector3d(0, 0, 90));
         }
     }
 

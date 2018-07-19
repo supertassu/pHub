@@ -25,6 +25,7 @@
 
 package me.tassu.phub;
 
+import com.flowpowered.math.vector.Vector3d;
 import com.github.xemiru.sponge.boxboy.Boxboy;
 import com.github.xemiru.sponge.boxboy.Menu;
 import com.github.xemiru.sponge.boxboy.button.ActionButton;
@@ -32,13 +33,18 @@ import com.github.xemiru.sponge.boxboy.button.Button;
 import com.github.xemiru.sponge.boxboy.button.DummyButton;
 import com.github.xemiru.sponge.boxboy.util.MenuPattern;
 import com.google.common.collect.Lists;
+import lombok.RequiredArgsConstructor;
 import lombok.val;
+import org.spongepowered.api.Game;
+import org.spongepowered.api.Sponge;
+import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.manipulator.mutable.item.EnchantmentData;
 import org.spongepowered.api.data.type.HandTypes;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.action.InteractEvent;
+import org.spongepowered.api.event.entity.MoveEntityEvent;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.enchantment.Enchantment;
@@ -47,15 +53,43 @@ import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
+@RequiredArgsConstructor
 public class ServerSelectorHandler {
 
     private Menu menu = getMenu();
+
+    private final PHub instance;
+
+    private Game game = Sponge.getGame();
+
+    private void queue(Player player, String server) {
+        instance.getBungeeLib()
+                .getChan()
+                .sendTo(player, buf -> buf.writeUTF("JoinQueue")
+                        .writeUTF(player.getUniqueId().toString())
+                        .writeUTF(server));
+
+        val world = game.getServer().getWorld(game.getServer().getDefaultWorld()
+                .orElseThrow(IllegalStateException::new).getUniqueId()).orElseThrow(IllegalArgumentException::new);
+
+        player.setLocation(new Location<>(world, -425, 40, 567));
+        player.setRotation(new Vector3d(0, 0, -90));
+    }
 
     private Button getWipButtonFor(ItemStack itemStack) {
         return ActionButton.of(
                 itemStack,
                 ctx -> ctx.getClicker().sendMessage(Text.of(TextColors.RED, TextStyles.ITALIC, "Not yet.... "))
+        );
+    }
+
+    private Button getButtonForQueue(ItemStack itemStack, String queue) {
+        return ActionButton.of(
+                itemStack,
+                ctx -> queue(ctx.getClicker(), queue)
         );
     }
 
@@ -111,7 +145,7 @@ public class ServerSelectorHandler {
 
         new MenuPattern()
                 .setButton('A', DummyButton.of(ItemStack.of(ItemTypes.STAINED_GLASS_PANE, 1)))
-                .setButton('B', getWipButtonFor(getSurvivalItem()))
+                .setButton('B', getButtonForQueue(getSurvivalItem(), "survival"))
                 .setPattern(
                         "AAAAAAAAA",
                         "A       A",
@@ -134,4 +168,18 @@ public class ServerSelectorHandler {
         event.setCancelled(true);
         menu.open(player);
     }
+
+    @Listener
+    public void onMoveEntity(MoveEntityEvent event) {
+        if (!(event.getTargetEntity() instanceof Player)) return;
+
+        val player = (Player) event.getTargetEntity();
+        val block = event.getToTransform().getLocation().getBlock();
+
+        if (block.getType() == BlockTypes.PORTAL) {
+            queue(player, "survival");
+        }
+
+    }
+
 }
