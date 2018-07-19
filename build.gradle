@@ -1,7 +1,13 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
+
 plugins {
     id 'org.spongepowered.plugin' version '0.8.1'
     id 'io.franzbecker.gradle-lombok' version '1.14'
-
+    id 'net.minecrell.licenser' version '0.4'
 }
 
 repositories {
@@ -17,4 +23,6 @@ dependencies {
     compile 'org.spongepowered:spongeapi:7.0.0'
 }
 
-
+license {
+    header = project.file('HEADER.txt')
+}
