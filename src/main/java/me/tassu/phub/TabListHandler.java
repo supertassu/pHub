@@ -57,7 +57,7 @@ public class TabListHandler {
 
         Sponge.getScheduler().createTaskBuilder()
                 .execute(() -> game.getServer().getOnlinePlayers().forEach(this::update))
-                .interval(10, TimeUnit.SECONDS)
+                .interval(2, TimeUnit.SECONDS)
                 .name("Hub Tab List updater")
                 .submit(instance);
     }
@@ -72,7 +72,7 @@ public class TabListHandler {
 
         val header = of(
                 NEW_LINE,
-                GREEN, BOLD, "***", RESET, TextStyles.RESET, DARK_GREEN, " TASSUCRAFT ",GREEN, BOLD, "***", NEW_LINE,
+                GREEN, BOLD, "***", RESET, TextStyles.RESET, DARK_GREEN, " TASSUCRAFT ", GREEN, BOLD, "***", NEW_LINE,
                 RESET, TextStyles.RESET, NEW_LINE,
                 GREEN, "YOU ARE PLAYING ON ", DARK_GREEN, "LOBBY-1", NEW_LINE,
                 GREEN, " WITH ", DARK_GREEN, getPlayersInThisServer(), GREEN, " OTHER PLAYERS", NEW_LINE,

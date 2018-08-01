@@ -56,7 +56,9 @@ public class ScoreboardHandler {
 
     private static final Text QUEUE_ID_TEXT = Text.of(TextColors.GRAY, "Queued for ");
     private static final Text QUEUE_POS_TEXT = Text.of(TextColors.GRAY, "Position ", TextColors.WHITE, "» ");
+
     private static final Text NA = Text.of(TextColors.RED, "N/A");
+    private static final Text LOADING = Text.of(TextColors.RED, "Loading...");
 
     public ScoreboardHandler(PHub instance) {
         Sponge.getScheduler().createTaskBuilder().execute(() -> Sponge.getServer().getOnlinePlayers().forEach(player -> {
@@ -64,7 +66,10 @@ public class ScoreboardHandler {
                     .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET,
                             player.get(Keys.EXPERIENCE_LEVEL).orElse(0))));
             player.getScoreboard().getTeam("int_online")
-                    .ifPresent(team -> team.setSuffix(Text.of(TextColors.RESET, BungeeTracker.getInstance().getCount())));
+                    .ifPresent(team -> {
+                        if (BungeeTracker.getInstance().getCount() == -1) team.setSuffix(LOADING);
+                        else team.setSuffix(Text.of(TextColors.RESET, BungeeTracker.getInstance().getCount()));
+                    });
 
             Optional.ofNullable(instance.getQueueDataMap().get(player.getUniqueId())).ifPresent(
                     queue -> {
@@ -90,7 +95,7 @@ public class ScoreboardHandler {
                     }
             );
         }))
-                .interval(10, TimeUnit.SECONDS)
+                .interval(2, TimeUnit.SECONDS)
                 .name("Hub Scoreboard updater")
                 .submit(instance);
     }
@@ -123,7 +128,7 @@ public class ScoreboardHandler {
                         Team
                                 .builder()
                                 .name("int_online")
-                                .suffix(Text.of(TextColors.DARK_GRAY, "Unknown"))
+                                .suffix(LOADING)
                                 .members(Collections.singleton(ONLINE_PLAYERS_TEXT))
                                 .build(),
                         Team
@@ -135,13 +140,13 @@ public class ScoreboardHandler {
                         Team
                                 .builder()
                                 .name("int_queue_id")
-                                .suffix(NA)
+                                .suffix(LOADING)
                                 .members(Collections.singleton(QUEUE_ID_TEXT))
                                 .build(),
                         Team
                                 .builder()
                                 .name("int_queue_pos")
-                                .suffix(NA)
+                                .suffix(LOADING)
                                 .members(Collections.singleton(QUEUE_POS_TEXT))
                                 .build()
                 ))

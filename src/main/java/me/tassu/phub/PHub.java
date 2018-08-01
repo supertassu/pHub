@@ -45,12 +45,10 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.gamemode.GameModes;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
-import org.spongepowered.api.event.action.FishingEvent;
 import org.spongepowered.api.event.cause.entity.damage.source.DamageSource;
 import org.spongepowered.api.event.cause.entity.damage.source.DamageSources;
 import org.spongepowered.api.event.entity.DamageEntityEvent;
 import org.spongepowered.api.event.entity.living.humanoid.ChangeGameModeEvent;
-import org.spongepowered.api.event.filter.IsCancelled;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.game.state.GameStartingServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingEvent;
@@ -67,7 +65,6 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.text.title.Title;
-import org.spongepowered.api.util.Tristate;
 
 import java.util.Map;
 import java.util.UUID;
@@ -93,9 +90,9 @@ public class PHub {
         bungeeLib = new flavor.pie.bungeelib.BungeeLib(container);
 
         bungeeLib.getChan().addListener(Platform.Type.SERVER, (data, connection, side) -> {
-            if (data.available() < "QueueUpdate".getBytes().length) return;
+            if (data.available() < "queue:update".getBytes().length) return;
             val subChannel = data.readUTF();
-            if (!subChannel.equalsIgnoreCase("QueueUpdate")) return;
+            if (!subChannel.equalsIgnoreCase("queue:update")) return;
 
             try {
                 //noinspection InfiniteLoopStatement - will throw an exception
@@ -253,6 +250,11 @@ public class PHub {
         if (player.gameMode().get() == GameModes.CREATIVE) return;
         if (event instanceof ChangeInventoryEvent.Held) return;
         event.setCancelled(true);
+    }
+
+    @Listener
+    public void onDisconnect(ClientConnectionEvent.Disconnect event, @First Player player) {
+        queueDataMap.remove(player.getUniqueId());
     }
 
     public PluginContainer getContainer() {

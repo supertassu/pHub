@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 public class BungeeTracker {
 
     @Getter private static BungeeTracker instance;
-    @Getter private int count = 0;
+    @Getter private int count = -1;
 
     public BungeeTracker(PHub plugin) {
         instance = this;
@@ -43,7 +43,7 @@ public class BungeeTracker {
             if (Sponge.getServer().getOnlinePlayers().size() < 1) return;
             plugin.getBungeeLib().getGlobalPlayerCount().thenAccept(count -> this.count = count);
         })
-                .interval(10, TimeUnit.SECONDS)
+                .interval(5, TimeUnit.SECONDS)
                 .name("Hub Scoreboard updater")
                 .submit(plugin);
     }

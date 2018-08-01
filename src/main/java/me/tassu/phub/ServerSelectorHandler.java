@@ -54,7 +54,8 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.world.Location;
-import org.spongepowered.api.world.World;
+
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class ServerSelectorHandler {
@@ -66,17 +67,23 @@ public class ServerSelectorHandler {
     private Game game = Sponge.getGame();
 
     private void queue(Player player, String server) {
-        instance.getBungeeLib()
-                .getChan()
-                .sendTo(player, buf -> buf.writeUTF("JoinQueue")
-                        .writeUTF(player.getUniqueId().toString())
-                        .writeUTF(server));
+        Sponge.getScheduler().createTaskBuilder()
+                .name("Queue Join Delay Task")
+                .delay(1, TimeUnit.SECONDS)
+                .execute(() -> {
+                    instance.getBungeeLib()
+                            .getChan()
+                            .sendTo(player, buf -> buf.writeUTF("queue:join")
+                                    .writeUTF(player.getUniqueId().toString())
+                                    .writeUTF(server));
 
-        val world = game.getServer().getWorld(game.getServer().getDefaultWorld()
-                .orElseThrow(IllegalStateException::new).getUniqueId()).orElseThrow(IllegalArgumentException::new);
+                    val world = game.getServer().getWorld(game.getServer().getDefaultWorld()
+                            .orElseThrow(IllegalStateException::new).getUniqueId()).orElseThrow(IllegalArgumentException::new);
 
-        player.setLocation(new Location<>(world, -425, 40, 567));
-        player.setRotation(new Vector3d(0, 0, -90));
+                    player.setLocation(new Location<>(world, -425, 40, 568));
+                    player.setRotation(new Vector3d(0, 0, -90));
+                })
+                .submit(instance);
     }
 
     private Button getWipButtonFor(ItemStack itemStack) {
