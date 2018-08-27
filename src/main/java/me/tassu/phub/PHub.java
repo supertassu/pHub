@@ -168,6 +168,8 @@ public class PHub {
                 .stay(100)
                 .fadeOut(100)
                 .build());
+
+        event.setMessageCancelled(true);
     }
 
     private ParticleEffect createFireworks() {
@@ -255,6 +257,7 @@ public class PHub {
     @Listener
     public void onDisconnect(ClientConnectionEvent.Disconnect event, @First Player player) {
         queueDataMap.remove(player.getUniqueId());
+        event.setMessageCancelled(true);
     }
 
     public PluginContainer getContainer() {
